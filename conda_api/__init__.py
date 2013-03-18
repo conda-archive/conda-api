@@ -31,15 +31,11 @@ def get_conda_version():
 def get_envs():
     """
     return all of the (named) environment (this does not include the root
-    environment), as a set of absolute path to their prefixes
+    environment), as a list of absolute path to their prefixes
     """
-    res = set()
     envs_dir = join(ROOT_PREFIX, 'envs')
-    for fn in os.listdir(envs_dir):
-        path = join(envs_dir, fn)
-        if isdir(path):
-            res.add(join(path, fn))
-    return res
+    return [join(envs_dir, fn) for fn in os.listdir(envs_dir)
+                  if isdir(join(envs_dir, fn))]
 
 
 def linked(prefix):
@@ -55,4 +51,7 @@ def linked(prefix):
 if __name__ == '__main__':
     #set_root_prefix('/Users/ilan/python')
     print repr(get_conda_version())
-    print get_envs()
+    for prefix in get_envs():
+        print prefix
+        for dist in linked(prefix):
+            print '\t', dist
