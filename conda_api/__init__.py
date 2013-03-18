@@ -1,29 +1,11 @@
 import re
 import os
-import sys
-from subprocess import Popen, PIPE
 from os.path import isdir, join
+
+import utils
 
 
 ROOT_PREFIX = '/opt/anaconda'
-
-
-def _call_conda(extra_args):
-    # call conda with the list of extra arguments, and return the tuple
-    # stdout, stderr
-    if sys.platform == 'win32':
-        python = join(ROOT_PREFIX, 'python.exe')
-        conda = join(ROOT_PREFIX, 'Scripts', 'conda-script.py')
-    else:
-        python = join(ROOT_PREFIX, 'bin/python')
-        conda = join(ROOT_PREFIX, 'bin/conda')
-
-    args = [python, conda] + extra_args
-    try:
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
-    except OSError:
-        sys.exit("Error: could not invoke %r\n" % args)
-    return p.communicate()
 
 
 def set_root_prefix(prefix):
@@ -39,7 +21,7 @@ def get_conda_version():
     return the version of conda being used as a string
     """
     pat = re.compile(r'conda:?\s+(\d\.\d\S+)')
-    stdout, stderr = _call_conda(['--version'])
+    stdout, stderr = utils.call_conda(ROOT_PREFIX, ['--version'])
     m = pat.match(stderr.strip())
     if m is None:
         raise Exception('output did not match: %r' % stderr)
@@ -71,6 +53,6 @@ def linked(prefix):
 
 
 if __name__ == '__main__':
-    set_root_prefix('/Users/ilan/python')
+    #set_root_prefix('/Users/ilan/python')
     print repr(get_conda_version())
     print get_envs()
