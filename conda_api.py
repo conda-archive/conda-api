@@ -38,7 +38,7 @@ def set_root_prefix(prefix):
 
 def get_conda_version():
     """
-    return the version of conda being used as a string
+    return the version of conda being used (invoked) as a string
     """
     pat = re.compile(r'conda:?\s+(\d\.\d\S+)')
     stdout, stderr = _call_conda(ROOT_PREFIX, ['--version'])
@@ -62,8 +62,11 @@ def linked(prefix):
     """
     return the (set of canonical names) of linked packages in prefix
     """
+    if not isdir(prefix):
+        raise Exception('no such directory: %r' % prefix)
     meta_dir = join(prefix, 'conda-meta')
     if not isdir(meta_dir):
+        # we might have nothing in linked (and no conda-meta directory)
         return set()
     return set(fn[:-5] for fn in os.listdir(meta_dir) if fn.endswith('.json'))
 
