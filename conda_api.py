@@ -40,7 +40,7 @@ def get_conda_version():
     """
     pat = re.compile(r'conda:?\s+(\d\.\d\S+)')
     stdout, stderr = _call_conda(ROOT_PREFIX, ['--version'])
-    m = pat.match(stderr.strip())
+    m = pat.match(stderr.decode().strip())
     if m is None:
         raise Exception('output did not match: %r' % stderr)
     return m.group(1)
