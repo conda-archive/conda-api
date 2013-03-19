@@ -93,7 +93,7 @@ def info():
     """
     Return a dictionary with confirmation information.
     No guarantee is made about which keys exist.  Therefore this function
-    should only be used for testing.
+    should only be used for testing and debugging.
     """
     return _call_and_parse(['info', '--output-json'])
 
