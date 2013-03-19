@@ -87,6 +87,14 @@ def split_canonical_name(cname):
     return tuple(cname.rsplit('-', 2))
 
 
+def info():
+    """
+    Return a dictionary with confirmation information.
+    No guarantee is made about which keys exist.
+    """
+    return _call_and_parse(['info', '--output-json'])
+
+
 def share(prefix):
     """
     Create a "share package" of the environment located in `prefix`,
@@ -123,7 +131,8 @@ if __name__ == '__main__':
         print(prefix)
         for dist in linked(prefix):
             print('\t' + dist)
-    path, ws = share('/Users/ilan/python/envs/py3k')
-    print ws
-    ws = clone(path, '/Users/ilan/python/envs/clone7')
-    print ws
+    #path, ws = share('/Users/ilan/python/envs/py3k')
+    #print ws
+    #ws = clone(path, '/Users/ilan/python/envs/clone')
+    #print ws
+    print info()
