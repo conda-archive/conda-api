@@ -135,4 +135,4 @@ if __name__ == '__main__':
     #print ws
     #ws = clone(path, '/Users/ilan/python/envs/clone')
     #print ws
-    print info()
+    print(repr(info()))
