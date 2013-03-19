@@ -92,6 +92,7 @@ def share(prefix):
     Create a "share package" of the environment located in `prefix`,
     and return the full path to the created package, as well as a list
     of warning, which might have occured while creating the package.
+
     This file is created in a temp directory, and it is the callers
     responsibility to remove this directory (after the file has been
     handled in some way).
@@ -102,8 +103,9 @@ def share(prefix):
 
 def clone(path, prefix):
     """
-    Clone the bundle (located at `path`) by creating a new environment at
-    `prefix`.
+    Clone a "share package" (located at `path`) by creating a new
+    environment at `prefix`, and return a list of warnings.
+
     The directory `path` is located in should be some temp directory or
     some other directory OUTSITE /opt/anaconda (this function handles
     copying the of the file if necessary for you).  After calling this
