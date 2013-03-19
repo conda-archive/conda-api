@@ -31,9 +31,9 @@ def _call_conda(extra_args):
 
 def _call_and_parse(extra_args):
     stdout, stderr = _call_conda(extra_args)
-    if stderr.strip():
-        raise Exception('conda %r\n: %n' (extra_args, stderr))
-    return json.loads(stdout)
+    if stderr.decode().strip():
+        raise Exception('conda %r\n: %n' (extra_args, stderr.decode()))
+    return json.loads(stdout.decode())
 
 
 def set_root_prefix(prefix):
