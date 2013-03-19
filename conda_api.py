@@ -61,8 +61,8 @@ def get_conda_version():
 
 def get_envs():
     """
-    return all of the (named) environment (this does not include the root
-    environment), as a list of absolute path to their prefixes
+    Return all of the (named) environment (this does not include the root
+    environment), as a list of absolute path to their prefixes.
     """
     envs_dir = join(ROOT_PREFIX, 'envs')
     return [join(envs_dir, fn) for fn in os.listdir(envs_dir)
@@ -71,7 +71,7 @@ def get_envs():
 
 def linked(prefix):
     """
-    return the (set of canonical names) of linked packages in prefix
+    Return the (set of canonical names) of linked packages in `prefix`.
     """
     if not isdir(prefix):
         raise Exception('no such directory: %r' % prefix)
@@ -84,7 +84,7 @@ def linked(prefix):
 
 def split_canonical_name(cname):
     """
-    split a canonical package name into (name, version, build) strings
+    Split a canonical package name into (name, version, build) strings.
     """
     return tuple(cname.rsplit('-', 2))
 
@@ -149,4 +149,15 @@ def test():
 
 
 if __name__ == '__main__':
+    from optparse import OptionParser
+
+    p = OptionParser(usage="usage: %prog [options] [ROOT_PREFIX]",
+                     description="self-test conda-api")
+    opts, args = p.parse_args()
+    if len(args) == 0:
+        pass
+    elif len(args) == 1:
+        set_root_prefix(args[0])
+    else:
+        p.error('did not expect more than one argument, try -h')
     test()
