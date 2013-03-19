@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import json
 from subprocess import Popen, PIPE
 from os.path import isdir, join
 
@@ -10,7 +11,7 @@ __version__ = '1.0.0'
 ROOT_PREFIX = '/opt/anaconda'
 
 
-def _call_conda(prefix, extra_args):
+def _call_conda(extra_args):
     # call conda with the list of extra arguments, and return the tuple
     # stdout, stderr
     if sys.platform == 'win32':
@@ -28,6 +29,13 @@ def _call_conda(prefix, extra_args):
     return p.communicate()
 
 
+def _call_and_parse(extra_args):
+    stdout, stderr = _call_conda(extra_args)
+    if stderr.strip():
+        raise Exception('conda %r\n: %n' (extra_args, stderr))
+    return json.loads(stdout)
+
+
 def set_root_prefix(prefix):
     """
     set the prefix to the root environment (default is /opt/anaconda)
@@ -40,8 +48,8 @@ def get_conda_version():
     """
     return the version of conda being used (invoked) as a string
     """
-    pat = re.compile(r'conda:?\s+(\d\.\d\S+)')
-    stdout, stderr = _call_conda(ROOT_PREFIX, ['--version'])
+    pat = re.compile(r'conda:?\s+(\d+\.\d\S+)')
+    stdout, stderr = _call_conda(['--version'])
     m = pat.match(stderr.decode().strip())
     if m is None:
         raise Exception('output did not match: %r' % stderr)
@@ -78,6 +86,19 @@ def split_canonical_name(cname):
     return tuple(cname.rsplit('-', 2))
 
 
+def share(prefix):
+    """
+    Create a "share package" of the environment located in `prefix`,
+    and return the full path to the created package, as well as a list
+    of warning, which might have occured while creating the package.
+    This file is created in a temp directory, and it is the callers
+    responsibility to remove this directory (after the file has been
+    handled in some way).
+    """
+    d = _call_and_parse(['share', '--output-json', '--prefix', prefix])
+    return d['path'], d['warnings']
+
+
 if __name__ == '__main__':
     set_root_prefix('/Users/ilan/python')
     print(repr(get_conda_version()))
@@ -85,3 +106,4 @@ if __name__ == '__main__':
         print(prefix)
         for dist in linked(prefix):
             print('\t' + dist)
+    print share('/Users/ilan/python/envs/py3k')
