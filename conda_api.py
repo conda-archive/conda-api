@@ -32,7 +32,8 @@ def _call_conda(extra_args):
 def _call_and_parse(extra_args):
     stdout, stderr = _call_conda(extra_args)
     if stderr.decode().strip():
-        raise Exception('conda %r\n: %n' (extra_args, stderr.decode()))
+        raise Exception('conda %r\n: BEGIN %s END' % (extra_args,
+                                                      stderr.decode()))
     return json.loads(stdout.decode())
 
 
@@ -99,6 +100,20 @@ def share(prefix):
     return d['path'], d['warnings']
 
 
+def clone(path, prefix):
+    """
+    Clone the bundle (located at `path`) by creating a new environment at
+    `prefix`.
+    The directory `path` is located in should be some temp directory or
+    some other directory OUTSITE /opt/anaconda (this function handles
+    copying the of the file if necessary for you).  After calling this
+    funtion, the original file (at `path`) may be removed.
+    The return object is a list of warnings
+    """
+    return _call_and_parse(['clone', '--output-json',
+                            '--prefix', prefix, path])
+
+
 if __name__ == '__main__':
     set_root_prefix('/Users/ilan/python')
     print(repr(get_conda_version()))
@@ -106,4 +121,7 @@ if __name__ == '__main__':
         print(prefix)
         for dist in linked(prefix):
             print('\t' + dist)
-    print share('/Users/ilan/python/envs/py3k')
+    path, ws = share('/Users/ilan/python/envs/py3k')
+    print ws
+    ws = clone(path, '/Users/ilan/python/envs/clone7')
+    print ws
