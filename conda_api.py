@@ -91,7 +91,7 @@ def split_canonical_name(cname):
 
 def info():
     """
-    Return a dictionary with confirmation information.
+    Return a dictionary with configuration information.
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
@@ -127,15 +127,26 @@ def clone(path, prefix):
                             '--prefix', prefix, path])
 
 
+def test():
+    """
+    self-test function, which prints useful debug information
+    """
+    print('sys.version: %r' % sys.version)
+    print('sys.prefix : %r' % sys.prefix)
+    print('conda_api.__version__: %r' % __version__)
+    print('conda_api.ROOT_PREFIX: %r' % ROOT_PREFIX)
+    if isdir(ROOT_PREFIX):
+        conda_version = get_conda_version()
+        print('conda version: %r' % conda_version)
+        print('conda info:')
+        d = info()
+        for kv in d.items():
+            print('\t%s=%r' % kv)
+        assert d['conda_version'] == conda_version
+    else:
+        print('Warning: no such directory: %r' % ROOT_PREFIX)
+    print('OK')
+
+
 if __name__ == '__main__':
-    #set_root_prefix('/Users/ilan/python')
-    print(repr(get_conda_version()))
-    for prefix in get_envs():
-        print(prefix)
-        for dist in linked(prefix):
-            print('\t' + dist)
-    #path, ws = share('/Users/ilan/python/envs/py3k')
-    #print ws
-    #ws = clone(path, '/Users/ilan/python/envs/clone')
-    #print ws
-    print(repr(info()))
+    test()
