@@ -25,21 +25,22 @@ def _call_conda(extra_args):
     try:
         p = Popen(args, stdout=PIPE, stderr=PIPE)
     except OSError:
-        sys.exit("Error: could not invoke %r\n" % args)
+        raise Exception("could not invoke %r\n" % args)
     return p.communicate()
 
 
 def _call_and_parse(extra_args):
     stdout, stderr = _call_conda(extra_args)
     if stderr.decode().strip():
-        raise Exception('conda %r\n: BEGIN %s END' % (extra_args,
-                                                      stderr.decode()))
+        raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args,
+                                                         stderr.decode()))
     return json.loads(stdout.decode())
 
 
 def set_root_prefix(prefix):
     """
-    set the prefix to the root environment (default is /opt/anaconda)
+    Set the prefix to the root environment (default is /opt/anaconda).
+    This function should only be called once (right after importing conda_api).
     """
     global ROOT_PREFIX
     ROOT_PREFIX = prefix
@@ -51,6 +52,7 @@ def get_conda_version():
     """
     pat = re.compile(r'conda:?\s+(\d+\.\d\S+)')
     stdout, stderr = _call_conda(['--version'])
+    # for some reason argparse decided to output the version to stderr
     m = pat.match(stderr.decode().strip())
     if m is None:
         raise Exception('output did not match: %r' % stderr)
@@ -90,7 +92,8 @@ def split_canonical_name(cname):
 def info():
     """
     Return a dictionary with confirmation information.
-    No guarantee is made about which keys exist.
+    No guarantee is made about which keys exist.  Therefore this function
+    should only be used for testing.
     """
     return _call_and_parse(['info', '--output-json'])
 
@@ -99,7 +102,7 @@ def share(prefix):
     """
     Create a "share package" of the environment located in `prefix`,
     and return the full path to the created package, as well as a list
-    of warning, which might have occured while creating the package.
+    of warning, which might have occurred while creating the package.
 
     This file is created in a temp directory, and it is the callers
     responsibility to remove this directory (after the file has been
@@ -114,11 +117,11 @@ def clone(path, prefix):
     Clone a "share package" (located at `path`) by creating a new
     environment at `prefix`, and return a list of warnings.
 
-    The directory `path` is located in should be some temp directory or
-    some other directory OUTSITE /opt/anaconda (this function handles
-    copying the of the file if necessary for you).  After calling this
-    funtion, the original file (at `path`) may be removed.
-    The return object is a list of warnings
+    The directory `path` is located in, should be some temp directory or
+    some other directory OUTSIDE /opt/anaconda.  After calling this
+    function, the original file (at `path`) may be removed (by the caller
+    of this function).
+    The return object is a list of warnings.
     """
     return _call_and_parse(['clone', '--output-json',
                             '--prefix', prefix, path])
