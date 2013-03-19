@@ -21,5 +21,10 @@ setup(
     license = "BSD",
     description = "light weight conda interface library",
     py_modules = ['conda_api'],
+    classifiers = [
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.3",
+    ],
     **kwds
 )
