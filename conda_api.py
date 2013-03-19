@@ -129,7 +129,9 @@ def clone(path, prefix):
 
 def test():
     """
-    self-test function, which prints useful debug information
+    Self-test function, which prints useful debug information.
+    This function returns None on success, and will crash the interpreter
+    on failure.
     """
     print('sys.version: %r' % sys.version)
     print('sys.prefix : %r' % sys.prefix)
