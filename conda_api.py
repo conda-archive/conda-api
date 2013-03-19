@@ -50,7 +50,7 @@ def get_conda_version():
     """
     return the version of conda being used (invoked) as a string
     """
-    pat = re.compile(r'conda:?\s+(\d+\.\d\S+)')
+    pat = re.compile(r'conda:?\s+(\d+\.\d\S+|unknown)')
     stdout, stderr = _call_conda(['--version'])
     # for some reason argparse decided to output the version to stderr
     m = pat.match(stderr.decode().strip())
@@ -128,7 +128,7 @@ def clone(path, prefix):
 
 
 if __name__ == '__main__':
-    set_root_prefix('/Users/ilan/python')
+    #set_root_prefix('/Users/ilan/python')
     print(repr(get_conda_version()))
     for prefix in get_envs():
         print(prefix)
