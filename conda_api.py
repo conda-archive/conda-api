@@ -95,7 +95,7 @@ def info():
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
-    return _call_and_parse(['info', '--output-json'])
+    return _call_and_parse(['info', '--json'])
 
 
 def share(prefix):
@@ -108,7 +108,7 @@ def share(prefix):
     responsibility to remove this directory (after the file has been
     handled in some way).
     """
-    return _call_and_parse(['share', '--output-json', '--prefix', prefix])
+    return _call_and_parse(['share', '--json', '--prefix', prefix])
 
 
 def clone(path, prefix):
@@ -122,8 +122,7 @@ def clone(path, prefix):
     of this function).
     The return object is a list of warnings.
     """
-    return _call_and_parse(['clone', '--output-json',
-                            '--prefix', prefix, path])
+    return _call_and_parse(['clone', '--json', '--prefix', prefix, path])
 
 
 def test():
