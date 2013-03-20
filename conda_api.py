@@ -108,8 +108,7 @@ def share(prefix):
     responsibility to remove this directory (after the file has been
     handled in some way).
     """
-    d = _call_and_parse(['share', '--output-json', '--prefix', prefix])
-    return d['path'], d['warnings']
+    return _call_and_parse(['share', '--output-json', '--prefix', prefix])
 
 
 def clone(path, prefix):
