@@ -101,8 +101,9 @@ def info():
 def share(prefix):
     """
     Create a "share package" of the environment located in `prefix`,
-    and return the full path to the created package, as well as a list
-    of warning, which might have occurred while creating the package.
+    and return a dictionary with (at least) the following keys:
+      - 'path': the full path to the created package
+      - 'warnings': a list of warnings
 
     This file is created in a temp directory, and it is the callers
     responsibility to remove this directory (after the file has been
@@ -114,7 +115,9 @@ def share(prefix):
 def clone(path, prefix):
     """
     Clone a "share package" (located at `path`) by creating a new
-    environment at `prefix`, and return a list of warnings.
+    environment at `prefix`, and return a dictionary with (at least) the
+    following keys:
+      - 'warnings': a list of warnings
 
     The directory `path` is located in, should be some temp directory or
     some other directory OUTSIDE /opt/anaconda.  After calling this
