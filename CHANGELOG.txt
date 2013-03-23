@@ -1,3 +1,3 @@
-2013-XX-XX   1.0.0:
+2013-03-22   1.0.0:
 -------------------
-  * initial release, which targets conda 1.5.0
+  * initial release, which targets conda 1.5.0 (and above!)
