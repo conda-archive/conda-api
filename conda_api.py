@@ -64,9 +64,8 @@ def get_envs():
     Return all of the (named) environment (this does not include the root
     environment), as a list of absolute path to their prefixes.
     """
-    envs_dir = join(ROOT_PREFIX, 'envs')
-    return [join(envs_dir, fn) for fn in os.listdir(envs_dir)
-                  if isdir(join(envs_dir, fn))]
+    info = _call_and_parse(['info', '--json'])
+    return info['envs']
 
 
 def linked(prefix):
