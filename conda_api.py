@@ -3,7 +3,7 @@ import os
 import sys
 import json
 from subprocess import Popen, PIPE
-from os.path import isdir, join
+from os.path import basename, isdir, join
 
 
 __version__ = '1.1.dev'
@@ -66,6 +66,19 @@ def get_envs():
     """
     info = _call_and_parse(['info', '--json'])
     return info['envs']
+
+
+def get_prefix_envname(name):
+    """
+    Given the name of an environment return its full prefix path, or None
+    if it cannot be found.
+    """
+    if name == 'root':
+        return ROOT_PREFIX
+    for prefix in get_envs():
+        if basename(prefix) == name:
+            return prefix
+    return None
 
 
 def linked(prefix):
