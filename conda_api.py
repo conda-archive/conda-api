@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE
 from os.path import basename, isdir, join
 
 
-__version__ = '1.1.dev'
+__version__ = '1.1.0'
 
 ROOT_PREFIX = '/opt/anaconda'
 

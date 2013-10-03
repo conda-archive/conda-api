@@ -1,3 +1,9 @@
+2013-10-03:  1.1.0:
+-------------------
+  * updated to work with conda 2.0
+  * add API function get_prefix_envname()
+
+
 2013-03-22   1.0.0:
 -------------------
   * initial release, which targets conda 1.5.0 (and above!)
