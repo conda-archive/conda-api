@@ -2,48 +2,81 @@ import re
 import os
 import sys
 import json
+import platform
 from subprocess import Popen, PIPE
 from os.path import basename, isdir, join
 
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
-ROOT_PREFIX = '/opt/anaconda'
-
-
-def _call_conda(extra_args):
+def _call_conda(extra_args, abspath=True):
     # call conda with the list of extra arguments, and return the tuple
     # stdout, stderr
-    if sys.platform == 'win32':
-        python = join(ROOT_PREFIX, 'python.exe')
-        conda = join(ROOT_PREFIX, 'Scripts', 'conda-script.py')
-    else:
-        python = join(ROOT_PREFIX, 'bin/python')
-        conda = join(ROOT_PREFIX, 'bin/conda')
+    if abspath:
+        if sys.platform.startswith('win'):
+            python = join(ROOT_PREFIX, 'python.exe')
+            conda  = join(ROOT_PREFIX, 'Scripts', 'conda-script.py')
+        else:
+            python = join(ROOT_PREFIX, 'bin/python')
+            conda  = join(ROOT_PREFIX, 'bin/conda')
+        cmd_list = [python, conda]
+    else: # just use whatever conda is on the path
+        cmd_list = ['conda']
 
-    args = [python, conda] + extra_args
+    cmd_list.extend(extra_args)
+
     try:
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
+        p = Popen(cmd_list, stdout=PIPE, stderr=PIPE)
     except OSError:
         raise Exception("could not invoke %r\n" % args)
     return p.communicate()
 
 
-def _call_and_parse(extra_args):
-    stdout, stderr = _call_conda(extra_args)
+def _call_and_parse(extra_args, abspath=True):
+    stdout, stderr = _call_conda(extra_args, abspath=abspath)
     if stderr.decode().strip():
         raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args,
                                                          stderr.decode()))
     return json.loads(stdout.decode())
 
 
-def set_root_prefix(prefix):
+def set_root_prefix(prefix=None):
     """
     Set the prefix to the root environment (default is /opt/anaconda).
     This function should only be called once (right after importing conda_api).
     """
     global ROOT_PREFIX
-    ROOT_PREFIX = prefix
+
+    if prefix:
+        ROOT_PREFIX = prefix
+    else: # find *some* conda instance, and then use info() to get 'root_prefix'
+        i = info(abspath=False)
+        ROOT_PREFIX = i['root_prefix']
+        '''
+        plat = 'posix'
+        if sys.platform.lower().startswith('win'):
+            listsep = ';'
+            plat = 'win'
+        else:
+            listsep = ':'
+
+        for p in os.environ['PATH'].split(listsep):
+            if (os.path.exists(os.path.join(p, 'conda')) or
+                os.path.exists(os.path.join(p, 'conda.exe')) or
+                os.path.exists(os.path.join(p, 'conda.bat'))):
+
+                # TEMPORARY:
+                ROOT_PREFIX = os.path.dirname(p) # root prefix is one directory up
+                i = info()
+                # REAL:
+                ROOT_PREFIX = i['root_prefix']
+                break
+        else: # fall back to standard install location, which may be wrong
+            if plat == 'win':
+                ROOT_PREFIX = 'C:\Anaconda'
+            else:
+                ROOT_PREFIX = '/opt/anaconda'
+        '''
 
 
 def get_conda_version():
@@ -101,13 +134,13 @@ def split_canonical_name(cname):
     return tuple(cname.rsplit('-', 2))
 
 
-def info():
+def info(abspath=True):
     """
     Return a dictionary with configuration information.
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
-    return _call_and_parse(['info', '--json'])
+    return _call_and_parse(['info', '--json'], abspath=abspath)
 
 
 def share(prefix):
@@ -122,6 +155,93 @@ def share(prefix):
     handled in some way).
     """
     return _call_and_parse(['share', '--json', '--prefix', prefix])
+
+
+def create(name=None, path=None, pkgs=None):
+    """
+    Create an environment either by name or path with a specified set of packages
+    """
+    if not pkgs or not isinstance(pkgs, (list, tuple)):
+        raise TypeError('must specify a list of one or more packages to install into new environment')
+
+    if name:
+        cmd_list = ['create', '--yes', '--quiet', '--name', name]
+    elif path:
+        cmd_list = ['create', '--yes', '--quiet', '--path', path]
+    else:
+        raise TypeError('must specify either an environment name or a path for new environment')
+
+    cmd_list.extend(pkgs)
+    return _call_conda(cmd_list)
+
+
+def install(name=None, path=None, pkgs=None):
+    """
+    Install packages into an environment either by name or path with a specified set of packages
+    """
+    if not pkgs or not isinstance(pkgs, (list, tuple)):
+        raise TypeError('must specify a list of one or more packages to install into existing environment')
+
+    if name:
+        cmd_list = ['install', '--yes', '--quiet', '--name', name]
+    elif path:
+        cmd_list = ['install', '--yes', '--quiet', '--path', path]
+    else: # just install into the current environment, whatever that is
+        cmd_list = ['install', '--yes', '--quiet']
+
+    cmd_list.extend(pkgs)
+    return _call_conda(cmd_list)
+
+
+def process(name=None, path=None, cmd=None, args=None):
+    """
+    Create a Popen process for cmd using the specified args but in the conda environment specified by name or path.
+
+    The returned object will need to be invoked with p.communicate() or similar.
+
+    :param name: name of conda environment
+    :param path: path to conda environment (if no name specified)
+    :param cmd:  command to invoke
+    :param args: arguments
+    :return: Popen object
+    """
+
+    if bool(name) == bool(path):
+        raise TypeError('exactly one of name or path must be specified')
+
+    if not cmd:
+        raise TypeError('cmd to execute must be specified')
+
+    if not args:
+        args = []
+
+    if name:
+        path = get_prefix_envname(name)
+
+    plat = 'posix'
+    if sys.platform.lower().startswith('win'):
+        listsep = ';'
+        plat = 'win'
+    else:
+        listsep = ':'
+
+    conda_env = dict(os.environ)
+
+    if plat == 'posix':
+        conda_env['PATH'] = path + os.path.sep + 'bin' + listsep + conda_env['PATH']
+    else: # win
+        conda_env['PATH'] = path + os.path.sep + 'Scripts' + listsep + conda_env['PATH']
+
+    conda_env['PATH'] = path + listsep + conda_env['PATH']
+
+    cmd_list = [cmd]
+    cmd_list.extend(args)
+
+    try:
+        p = Popen(cmd_list, env=conda_env, stdout=PIPE, stderr=PIPE)
+    except OSError:
+        raise Exception("could not invoke %r\n" % cmd_list)
+    return p
 
 
 def clone(path, prefix):

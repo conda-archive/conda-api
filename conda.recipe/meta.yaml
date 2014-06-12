@@ -1,0 +1,17 @@
+package:
+  name: conda-api
+  version: 1.2.0
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+
+test:
+  imports:
+    - conda_api
+
+about:
+  home: https://github.com/conda/conda-api
+  license: BSD
