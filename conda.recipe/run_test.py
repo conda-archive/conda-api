@@ -16,4 +16,6 @@ else:
 conda_api.set_root_prefix(root_prefix)
 conda_api.test()
 
-assert conda_api.__version__ == '1.2.0'
+
+
+assert conda_api.__version__ == '1.2.1'
