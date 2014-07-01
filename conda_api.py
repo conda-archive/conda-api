@@ -9,8 +9,13 @@ from os.path import basename, isdir, join
 
 __version__ = '1.2.1'
 
+class CondaError(Exception):
+    "General Conda error"
+    pass
+
 class CondaEnvExistsError(Exception):
-    "indicates an environment already exists"
+    "Conda environment already exists"
+    pass
 
 def _call_conda(extra_args, abspath=True):
     # call conda with the list of extra arguments, and return the tuple
@@ -182,7 +187,11 @@ def create(name=None, path=None, pkgs=None):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    (out, err) = _call_conda(cmd_list)
+    if err.decode().strip():
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
+    return out
+
 
 def install(name=None, path=None, pkgs=None):
     """
@@ -199,8 +208,10 @@ def install(name=None, path=None, pkgs=None):
         cmd_list = ['install', '--yes', '--quiet']
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
-
+    (out, err) = _call_conda(cmd_list)
+    if err.decode().strip():
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
+    return out
 
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
