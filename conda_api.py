@@ -2,7 +2,6 @@ import re
 import os
 import sys
 import json
-import platform
 from subprocess import Popen, PIPE
 from os.path import basename, isdir, join
 
@@ -21,7 +20,7 @@ def _call_conda(extra_args, abspath=True):
     # call conda with the list of extra arguments, and return the tuple
     # stdout, stderr
     if abspath:
-        if sys.platform.startswith('win'):
+        if sys.platform == 'win32':
             python = join(ROOT_PREFIX, 'python.exe')
             conda  = join(ROOT_PREFIX, 'Scripts', 'conda-script.py')
         else:
@@ -167,11 +166,14 @@ def share(prefix):
 
 def create(name=None, path=None, pkgs=None):
     """
-    Create an environment either by name or path with a specified set of packages
+    Create an environment either by name or path with a specified set of
+    packages
     """
     if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into new environment')
+        raise TypeError('must specify a list of one or more packages to '
+                        'install into new environment')
 
+    cmd_list = ['create', '--yes', '--quiet']
     if name:
         ref         = name
         search      = [os.path.join(d, name) for d in info()['envs_dirs']]
@@ -181,7 +183,8 @@ def create(name=None, path=None, pkgs=None):
         search      = [path]
         cmd_list    = ['create', '--yes', '--quiet', '--path', path]
     else:
-        raise TypeError('must specify either an environment name or a path for new environment')
+        raise TypeError('must specify either an environment name or a path '
+                        'for new environment')
 
     if any(os.path.exists(path) for path in search):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
@@ -195,17 +198,20 @@ def create(name=None, path=None, pkgs=None):
 
 def install(name=None, path=None, pkgs=None):
     """
-    Install packages into an environment either by name or path with a specified set of packages
+    Install packages into an environment either by name or path with a
+    specified set of packages
     """
     if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into existing environment')
+        raise TypeError('must specify a list of one or more packages to '
+                        'install into existing environment')
 
+    cmd_list = ['install', '--yes', '--quiet']
     if name:
-        cmd_list = ['install', '--yes', '--quiet', '--name', name]
+        cmd_list.extend(['--name', name])
     elif path:
-        cmd_list = ['install', '--yes', '--quiet', '--path', path]
+        cmd_list.extend(['--path', path])
     else: # just install into the current environment, whatever that is
-        cmd_list = ['install', '--yes', '--quiet']
+        pass
 
     cmd_list.extend(pkgs)
     (out, err) = _call_conda(cmd_list)
@@ -215,7 +221,8 @@ def install(name=None, path=None, pkgs=None):
 
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
-    Create a Popen process for cmd using the specified args but in the conda environment specified by name or path.
+    Create a Popen process for cmd using the specified args but in the conda
+    environment specified by name or path.
 
     The returned object will need to be invoked with p.communicate() or similar.
 
