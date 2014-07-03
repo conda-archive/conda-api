@@ -6,7 +6,15 @@ from subprocess import Popen, PIPE
 from os.path import basename, isdir, join
 
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
+
+class CondaError(Exception):
+    "General Conda error"
+    pass
+
+class CondaEnvExistsError(Exception):
+    "Conda environment already exists"
+    pass
 
 def _call_conda(extra_args, abspath=True):
     # call conda with the list of extra arguments, and return the tuple
@@ -167,15 +175,25 @@ def create(name=None, path=None, pkgs=None):
 
     cmd_list = ['create', '--yes', '--quiet']
     if name:
-        cmd_list.extend(['--name', name])
+        ref         = name
+        search      = [os.path.join(d, name) for d in info()['envs_dirs']]
+        cmd_list    = ['create', '--yes', '--quiet', '--name', name]
     elif path:
-        cmd_list.extend(['--path', path])
+        ref         = path
+        search      = [path]
+        cmd_list    = ['create', '--yes', '--quiet', '--path', path]
     else:
         raise TypeError('must specify either an environment name or a path '
                         'for new environment')
 
+    if any(os.path.exists(path) for path in search):
+        raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
+
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    (out, err) = _call_conda(cmd_list)
+    if err.decode().strip():
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
+    return out
 
 
 def install(name=None, path=None, pkgs=None):
@@ -196,10 +214,12 @@ def install(name=None, path=None, pkgs=None):
         pass
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    (out, err) = _call_conda(cmd_list)
+    if err.decode().strip():
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
+    return out
 
-
-def process(name=None, path=None, cmd=None, args=None):
+def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
     Create a Popen process for cmd using the specified args but in the conda
     environment specified by name or path.
@@ -209,7 +229,10 @@ def process(name=None, path=None, cmd=None, args=None):
     :param name: name of conda environment
     :param path: path to conda environment (if no name specified)
     :param cmd:  command to invoke
-    :param args: arguments
+    :param args: argument
+    :param stdin: stdin
+    :param stdout: stdout
+    :param stderr: stderr
     :return: Popen object
     """
 
@@ -245,7 +268,7 @@ def process(name=None, path=None, cmd=None, args=None):
     cmd_list.extend(args)
 
     try:
-        p = Popen(cmd_list, env=conda_env, stdout=PIPE, stderr=PIPE)
+        p = Popen(cmd_list, env=conda_env, stdin=stdin, stdout=stdout, stderr=stderr)
     except OSError:
         raise Exception("could not invoke %r\n" % cmd_list)
     return p
