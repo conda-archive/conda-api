@@ -47,6 +47,30 @@ def _call_and_parse(extra_args, abspath=True):
     return json.loads(stdout.decode())
 
 
+def _setup_commands_from_kwargs(kwargs, keys=tuple()):
+    cmd_list = []
+    if kwargs.get('override_channels', False) and 'channel' not in kwargs:
+        raise ValueError('conda search: override_channels requires channel')
+
+    if 'env' in kwargs:
+        cmd_list.extend(['--name', kwargs.pop('env')])
+    if 'prefix' in kwargs:
+        cmd_list.extend(['--prefix', kwargs.pop('prefix')])
+    if 'channel' in kwargs:
+        channel = kwargs.pop('channel')
+        if isinstance(channel, str):
+            cmd_list.extend(['--channel', channel])
+        else:
+            cmd_list.append('--channel')
+            cmd_list.extend(channel)
+
+    for key in keys:
+        if key in kwargs and kwargs[key]:
+            cmd_list.append('--' + key.replace('_', '-'))
+
+    return cmd_list
+
+
 def set_root_prefix(prefix=None):
     """
     Set the prefix to the root environment (default is /opt/anaconda).
@@ -150,29 +174,33 @@ def info(abspath=True):
     return _call_and_parse(['info', '--json'], abspath=abspath)
 
 
+def package_info(package, abspath=True):
+    """
+    Return a dictionary with package information.
+
+    Structure is {
+        'package_name': [{
+            'depends': list,
+            'version': str,
+            'name': str,
+            'license': str,
+            'fn': ...,
+            ...
+        }]
+    }
+    """
+    return _call_and_parse(['info', package, '--json'], abspath=abspath)
+
+
 def search(regex=None, **kwargs):
     """
     Search for packages.
     """
     cmd_list = ['search', '--json']
 
-    if kwargs.get('override_channels', False) and 'channel' not in kwargs:
-        raise ValueError('conda search: override_channels requires channel')
-
     if regex:
         cmd_list.append(regex)
 
-    if 'env' in kwargs:
-        cmd_list.extend(['--name', kwargs.pop('env')])
-    if 'prefix' in kwargs:
-        cmd_list.extend(['--prefix', kwargs.pop('prefix')])
-    if 'channel' in kwargs:
-        channel = kwargs.pop('channel')
-        if isinstance(channel, str):
-            cmd_list.extend(['--channel', channel])
-        else:
-            cmd_list.append('--channel')
-            cmd_list.extend(channel)
     if 'platform' in kwargs:
         platform = kwargs.pop('platform')
         platforms = ('win-32', 'win-64', 'osx-64', 'linux-32', 'linux-64')
@@ -181,10 +209,11 @@ def search(regex=None, **kwargs):
                              ', '.join(platforms))
         cmd_list.extend(['--platform', platform])
 
-    for key in ('canonical', 'unknown', 'use_index_cache',
-                'outdated', 'override_channels'):
-        if key in kwargs and kwargs[key]:
-            cmd_list.append('--' + key.replace('_', '-'))
+    cmd_list.extend(
+        _setup_commands_from_kwargs(
+            kwargs,
+            ('canonical', 'unknown', 'use_index_cache', 'outdated',
+             'override_channels')))
 
     return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
 
@@ -257,6 +286,46 @@ def install(name=None, path=None, pkgs=None):
     if err.decode().strip():
         raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
     return out
+
+
+def remove(*pkgs, **kwargs):
+    """
+    Remove a package (from an environment) by name.
+
+    Returns {
+        success: bool, (this is always true),
+        (other information)
+    }
+    """
+    cmd_list = ['remove', '--json']
+
+    if not pkgs:
+        raise ValueError("Must specify at least one package to remove, or all=True.")
+
+    cmd_list.extend(
+        _setup_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'features', 'override_channels',
+             'no_pin', 'force', 'all')))
+
+    cmd_list.extend(pkgs)
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
+def remove_environment(env, **kwargs):
+    """
+    Remove an environment entirely.
+
+    See ``remove``.
+    """
+    return remove(env=env, all=True)
+
 
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
