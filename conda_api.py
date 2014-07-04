@@ -150,6 +150,45 @@ def info(abspath=True):
     return _call_and_parse(['info', '--json'], abspath=abspath)
 
 
+def search(regex=None, **kwargs):
+    """
+    Search for packages.
+    """
+    cmd_list = ['search', '--json']
+
+    if kwargs.get('override_channels', False) and 'channel' not in kwargs:
+        raise ValueError('conda search: override_channels requires channel')
+
+    if regex:
+        cmd_list.append(regex)
+
+    if 'env' in kwargs:
+        cmd_list.extend(['--name', kwargs.pop('env')])
+    if 'prefix' in kwargs:
+        cmd_list.extend(['--prefix', kwargs.pop('prefix')])
+    if 'channel' in kwargs:
+        channel = kwargs.pop('channel')
+        if isinstance(channel, str):
+            cmd_list.extend(['--channel', channel])
+        else:
+            cmd_list.append('--channel')
+            cmd_list.extend(channel)
+    if 'platform' in kwargs:
+        platform = kwargs.pop('platform')
+        platforms = ('win-32', 'win-64', 'osx-64', 'linux-32', 'linux-64')
+        if platform not in platforms:
+            raise ValueError('conda search: platform must be one of ' +
+                             ', '.join(platforms))
+        cmd_list.extend(['--platform', platform])
+
+    for key in ('canonical', 'unknown', 'use_index_cache',
+                'outdated', 'override_channels'):
+        if key in kwargs and kwargs[key]:
+            cmd_list.append('--' + key.replace('_', '-'))
+
+    return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+
 def share(prefix):
     """
     Create a "share package" of the environment located in `prefix`,
