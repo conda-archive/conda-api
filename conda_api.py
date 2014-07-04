@@ -398,6 +398,114 @@ def clone(path, prefix):
     return _call_and_parse(['clone', '--json', '--prefix', prefix, path])
 
 
+def _setup_config_from_kwargs(kwargs):
+    cmd_list = ['--json', '--force']
+
+    if 'file' in kwargs:
+        cmd_list.extend(['--file', kwargs['file']])
+
+    if 'system' in kwargs:
+        cmd_list.append('--system')
+
+    return cmd_list
+
+
+def config_path(**kwargs):
+    """
+    Get the path to the config file.
+    """
+    cmd_list = ['config', '--get']
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result['rc_path']
+
+
+def config_get(*keys, **kwargs):
+    """
+    Get the values of configuration keys.
+
+    Returns a dictionary of values. Note, the key may not be in the
+    dictionary if the key wasn't set in the configuration file.
+    """
+    cmd_list = ['config', '--get']
+    cmd_list.extend(keys)
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result['get']
+
+
+def config_set(key, value, **kwargs):
+    """
+    Set a key to a (bool) value.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--set', key, str(value)]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_add(key, value, **kwargs):
+    """
+    Add a value to a key.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--add', key, value]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_remove(key, value, **kwargs):
+    """
+    Remove a value from a key.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--remove', key, value]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_delete(key, **kwargs):
+    """
+    Remove a key entirely.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--remove-key', key]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
 def test():
     """
     Self-test function, which prints useful debug information.
