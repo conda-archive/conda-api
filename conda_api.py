@@ -12,7 +12,7 @@ class CondaError(Exception):
     "General Conda error"
     pass
 
-class CondaEnvExistsError(Exception):
+class CondaEnvExistsError(CondaError):
     "Conda environment already exists"
     pass
 
