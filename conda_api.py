@@ -213,7 +213,7 @@ def search(regex=None, **kwargs):
         _setup_install_commands_from_kwargs(
             kwargs,
             ('canonical', 'unknown', 'use_index_cache', 'outdated',
-             'override_channels')))
+             'override_channels', 'spec')))
 
     return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
 
