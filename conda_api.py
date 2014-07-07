@@ -47,7 +47,7 @@ def _call_and_parse(extra_args, abspath=True):
     return json.loads(stdout.decode())
 
 
-def _setup_commands_from_kwargs(kwargs, keys=tuple()):
+def _setup_install_commands_from_kwargs(kwargs, keys=tuple()):
     cmd_list = []
     if kwargs.get('override_channels', False) and 'channel' not in kwargs:
         raise ValueError('conda search: override_channels requires channel')
@@ -210,7 +210,7 @@ def search(regex=None, **kwargs):
         cmd_list.extend(['--platform', platform])
 
     cmd_list.extend(
-        _setup_commands_from_kwargs(
+        _setup_install_commands_from_kwargs(
             kwargs,
             ('canonical', 'unknown', 'use_index_cache', 'outdated',
              'override_channels')))
@@ -288,6 +288,32 @@ def install(name=None, path=None, pkgs=None):
     return out
 
 
+def update(*pkgs, **kwargs):
+    """
+    Update package(s) (in an environment) by name.
+    """
+    cmd_list = ['update', '--json', '--quiet']
+
+    if not pkgs and not kwargs.get('all'):
+        raise ValueError("Must specify at least one package to update, or all=True.")
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'no_deps', 'override_channels',
+             'no_pin', 'force', 'all', 'use_index_cache', 'use_local',
+             'alt_hint')))
+
+    cmd_list.extend(pkgs)
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
 def remove(*pkgs, **kwargs):
     """
     Remove a package (from an environment) by name.
@@ -297,13 +323,13 @@ def remove(*pkgs, **kwargs):
         (other information)
     }
     """
-    cmd_list = ['remove', '--json']
+    cmd_list = ['remove', '--json', '--quiet']
 
     if not pkgs:
         raise ValueError("Must specify at least one package to remove, or all=True.")
 
     cmd_list.extend(
-        _setup_commands_from_kwargs(
+        _setup_install_commands_from_kwargs(
             kwargs,
             ('dry_run', 'features', 'override_channels',
              'no_pin', 'force', 'all')))
