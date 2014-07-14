@@ -181,7 +181,7 @@ def create(name=None, path=None, pkgs=None):
     elif path:
         ref         = path
         search      = [path]
-        cmd_list    = ['create', '--yes', '--quiet', '--path', path]
+        cmd_list    = ['create', '--yes', '--quiet', '--prefix', path]
     else:
         raise TypeError('must specify either an environment name or a path '
                         'for new environment')
@@ -209,7 +209,7 @@ def install(name=None, path=None, pkgs=None):
     if name:
         cmd_list.extend(['--name', name])
     elif path:
-        cmd_list.extend(['--path', path])
+        cmd_list.extend(['--prefix', path])
     else: # just install into the current environment, whatever that is
         pass
 
