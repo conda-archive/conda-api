@@ -532,14 +532,14 @@ def config_delete(key, **kwargs):
     return result.get('warnings', [])
 
 
-def launch(command, abspath=True):
+def run(command, abspath=True):
     """
     Launch the specified app by name or full package name.
 
     Returns a dictionary containing the key "fn", whose value is the full
     package (ending in ``.tar.bz2``) of the app.
     """
-    cmd_list = ['launch', '--json', command]
+    cmd_list = ['run', '--json', command]
 
     result = _call_and_parse(cmd_list, abspath=abspath)
 
