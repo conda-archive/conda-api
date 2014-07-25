@@ -116,8 +116,12 @@ def get_conda_version():
     """
     pat = re.compile(r'conda:?\s+(\d+\.\d\S+|unknown)')
     stdout, stderr = _call_conda(['--version'])
-    # for some reason argparse decided to output the version to stderr
+    # argparse outputs version to stderr in Python < 3.4.
+    # http://bugs.python.org/issue18920
     m = pat.match(stderr.decode().strip())
+    if m is None:
+        m = pat.match(stdout.decode().strip())
+
     if m is None:
         raise Exception('output did not match: %r' % stderr)
     return m.group(1)
@@ -292,7 +296,7 @@ def update(*pkgs, **kwargs):
     """
     Update package(s) (in an environment) by name.
     """
-    cmd_list = ['update', '--json', '--quiet']
+    cmd_list = ['update', '--json', '--quiet', '--yes']
 
     if not pkgs and not kwargs.get('all'):
         raise ValueError("Must specify at least one package to update, or all=True.")
@@ -323,7 +327,7 @@ def remove(*pkgs, **kwargs):
         (other information)
     }
     """
-    cmd_list = ['remove', '--json', '--quiet']
+    cmd_list = ['remove', '--json', '--quiet', '--yes']
 
     if not pkgs:
         raise ValueError("Must specify at least one package to remove, or all=True.")
