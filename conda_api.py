@@ -268,12 +268,12 @@ def create(name=None, path=None, pkgs=None):
     return out
 
 
-def install(name=None, path=None, pkgs=None):
+def install(*pkgs, name=None, path=None):
     """
     Install packages into an environment either by name or path with a
     specified set of packages
     """
-    if not pkgs or not isinstance(pkgs, (list, tuple)):
+    if not pkgs:
         raise TypeError('must specify a list of one or more packages to '
                         'install into existing environment')
 
@@ -299,7 +299,7 @@ def update(*pkgs, **kwargs):
     cmd_list = ['update', '--json', '--quiet', '--yes']
 
     if not pkgs and not kwargs.get('all'):
-        raise ValueError("Must specify at least one package to update, or all=True.")
+        raise TypeError("Must specify at least one package to update, or all=True.")
 
     cmd_list.extend(
         _setup_install_commands_from_kwargs(

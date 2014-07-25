@@ -27,7 +27,14 @@ class TestApi(unittest.TestCase):
 
     def test_install(self):
         try:
-            conda_api.install(pkgs=['python'], path=self.prefix)
+            for pkgset in (['python=3.4'], ['python=3.4.0']):
+                conda_api.install(*pkgset, path=self.prefix)
+        except CondaError as e:
+            self.fail("install fails: %s" % e)
+
+    def test_install_update(self):
+        try:
+            conda_api.update('python', path=self.prefix)
         except CondaError as e:
             self.fail("install fails: %s" % e)
 
