@@ -25,6 +25,17 @@ class TestApi(unittest.TestCase):
     def test_envs(self):
         self.assertIsInstance(conda_api.get_envs(), list)
 
+    def test_install(self):
+        try:
+            conda_api.install(pkgs=['python'], path=self.prefix)
+        except CondaError as e:
+            self.fail("install fails: %s" % e)
+
+    def test_linked(self):
+        linked = conda_api.linked(self.prefix)
+        self.assertIsInstance(linked, set)
+        self.assertTrue(any('python' in pkg for pkg in linked))
+
 # print(conda_api.config_path())
 # print(conda_api.config_path(system=True))
 # print(conda_api.config_get())
