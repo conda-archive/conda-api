@@ -196,14 +196,20 @@ def package_info(package, abspath=True):
     return _call_and_parse(['info', package, '--json'], abspath=abspath)
 
 
-def search(regex=None, **kwargs):
+def search(regex=None, spec=None, **kwargs):
     """
     Search for packages.
     """
     cmd_list = ['search', '--json']
 
+    if regex and spec:
+        raise TypeError('conda search: only one of regex or spec allowed')
+
     if regex:
         cmd_list.append(regex)
+
+    if spec:
+        cmd_list.extend(['--spec', spec])
 
     if 'platform' in kwargs:
         platform = kwargs.pop('platform')
@@ -217,7 +223,7 @@ def search(regex=None, **kwargs):
         _setup_install_commands_from_kwargs(
             kwargs,
             ('canonical', 'unknown', 'use_index_cache', 'outdated',
-             'override_channels', 'spec')))
+             'override_channels')))
 
     return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
 
