@@ -374,9 +374,9 @@ def remove_environment(name=None, path=None, **kwargs):
 
 def clone_environment(clone, name=None, path=None, **kwargs):
     """
-    Clone an environment.
+    Clone the environment ``clone`` into ``name`` or ``path``.
     """
-    cmd_list = ['clone', '--json', '--quiet', '--clone', clone]
+    cmd_list = ['create', '--json', '--quiet']
 
     if (name and path) or not (name or path):
         raise TypeError("conda clone_environment: exactly one of name or path required")
@@ -386,6 +386,8 @@ def clone_environment(clone, name=None, path=None, **kwargs):
 
     if path:
         cmd_list.extend(['--prefix', path])
+
+    cmd_list.extend(['--clone', clone])
 
     cmd_list.extend(
         _setup_install_commands_from_kwargs(

@@ -29,8 +29,12 @@ class TestApi(unittest.TestCase):
         self.assertIsInstance(conda_api.get_envs(), list)
         try:
             path = os.path.join(tempfile.mkdtemp(), 'conda_api_test')
+            clone = os.path.join(tempfile.mkdtemp(), 'conda_api_test_clone')
             conda_api.create(path=path, pkgs=['python'])
+            conda_api.clone_environment(path, path=clone)
+            self.assertEqual(conda_api.linked(path), conda_api.linked(clone))
             conda_api.remove_environment(path=path)
+            conda_api.remove_environment(path=clone)
         except Exception as e:
             self.fail('create/remove fails: %s' % e)
 
