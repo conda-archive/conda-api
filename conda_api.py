@@ -335,8 +335,17 @@ def remove(*pkgs, **kwargs):
     """
     cmd_list = ['remove', '--json', '--quiet', '--yes']
 
-    if not pkgs:
-        raise ValueError("Must specify at least one package to remove, or all=True.")
+    if not pkgs and not kwargs.get('all'):
+        raise TypeError("Must specify at least one package to remove, or all=True.")
+
+    if kwargs.get('name') and kwargs.get('path'):
+        raise TypeError('conda remove: At most one of name, path allowed')
+
+    if kwargs.get('name'):
+        cmd_list.extend(['--name', kwargs.pop('name')])
+
+    if kwargs.get('path'):
+        cmd_list.extend(['--prefix', kwargs.pop('path')])
 
     cmd_list.extend(
         _setup_install_commands_from_kwargs(
@@ -354,13 +363,13 @@ def remove(*pkgs, **kwargs):
     return result
 
 
-def remove_environment(env, **kwargs):
+def remove_environment(name=None, path=None, **kwargs):
     """
     Remove an environment entirely.
 
     See ``remove``.
     """
-    return remove(env=env, all=True)
+    return remove(name=name, path=path, all=True, **kwargs)
 
 
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
