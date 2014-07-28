@@ -50,7 +50,7 @@ def _call_and_parse(extra_args, abspath=True):
 def _setup_install_commands_from_kwargs(kwargs, keys=tuple()):
     cmd_list = []
     if kwargs.get('override_channels', False) and 'channel' not in kwargs:
-        raise ValueError('conda search: override_channels requires channel')
+        raise TypeError('conda search: override_channels requires channel')
 
     if 'env' in kwargs:
         cmd_list.extend(['--name', kwargs.pop('env')])
@@ -209,7 +209,7 @@ def search(regex=None, **kwargs):
         platform = kwargs.pop('platform')
         platforms = ('win-32', 'win-64', 'osx-64', 'linux-32', 'linux-64')
         if platform not in platforms:
-            raise ValueError('conda search: platform must be one of ' +
+            raise TypeError('conda search: platform must be one of ' +
                              ', '.join(platforms))
         cmd_list.extend(['--platform', platform])
 
