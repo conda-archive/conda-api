@@ -11,9 +11,12 @@ class TestApi(unittest.TestCase):
     def setUpClass(self):
         conda_api.set_root_prefix()
         self.prefix = tempfile.mkdtemp()
+        handle, fpath = tempfile.mkstemp()
+        self.config = fpath
 
     @classmethod
     def tearDownClass(self):
+        os.remove(self.config)
         conda_api.remove_environment(path=self.prefix)
 
     def test_version(self):
@@ -37,6 +40,13 @@ class TestApi(unittest.TestCase):
                 result = conda_api.install(pkgs=pkgset, path=self.prefix)
         except conda_api.CondaError as e:
             self.fail("install fails: %s" % e)
+
+        for pkg in conda_api.linked(self.prefix):
+            info = conda_api.package_info(pkg + '.tar.bz2')
+            # info isn't necessarily complete because conda info only checks
+            # prefixes in default prefix dirs and there isn't a way to
+            # specify a prefix to check yet
+            self.assertIn(pkg + '.tar.bz2', info)
 
         try:
             result = conda_api.update('python', path=self.prefix)
@@ -68,15 +78,13 @@ class TestApi(unittest.TestCase):
         self.assertIsInstance(result['ipython'], list)
         self.assertIsInstance(result['ipython'][0], dict)
 
-# print(conda_api.config_path())
-# print(conda_api.config_path(system=True))
-# print(conda_api.config_get())
-# print(conda_api.config_get('channels'))
-# print(conda_api.config_get('use_pip'))
-# print(conda_api.config_set('use_pip', True))
-# print(conda_api.config_get('use_pip'))
-# print(conda_api.config_set('use_pip', False))
-# print(conda_api.config_get('use_pip'))
-# print(conda_api.config_add('channels', 'binstar'))
-# print(conda_api.config_remove('channels', 'binstar'))
-# print(conda_api.config_delete('use_pip'))
+    def test_config(self):
+        self.assertIsInstance(conda_api.config_path(), str)
+        self.assertEqual(conda_api.config_set('use_pip', False, file=self.config), [])
+        self.assertEqual(conda_api.config_add('channels', 'wakari', file=self.config), [])
+        self.assertEqual(conda_api.config_get('channels', file=self.config), {'channels': ['wakari']})
+        self.assertEqual(conda_api.config_get('use_pip', file=self.config), {'use_pip': False})
+        self.assertEqual(conda_api.config_remove('channels', 'wakari', file=self.config), [])
+        self.assertEqual(conda_api.config_get('channels', file=self.config).get('channels', []), [])
+        self.assertEqual(conda_api.config_delete('use_pip', file=self.config), [])
+        self.assertEqual(conda_api.config_get('use_pip', file=self.config), {})
