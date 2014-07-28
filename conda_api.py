@@ -372,6 +372,35 @@ def remove_environment(name=None, path=None, **kwargs):
     return remove(name=name, path=path, all=True, **kwargs)
 
 
+def clone_environment(clone, name=None, path=None, **kwargs):
+    """
+    Clone an environment.
+    """
+    cmd_list = ['clone', '--json', '--quiet', '--clone', clone]
+
+    if (name and path) or not (name or path):
+        raise TypeError("conda clone_environment: exactly one of name or path required")
+
+    if name:
+        cmd_list.extend(['--name', name])
+
+    if path:
+        cmd_list.extend(['--prefix', path])
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'unknown', 'use_index_cache', 'use_local', 'no_pin',
+             'force', 'all', 'channel', 'override_channels', 'no_default_packages')))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
     Create a Popen process for cmd using the specified args but in the conda
