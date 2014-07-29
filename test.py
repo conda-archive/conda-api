@@ -4,6 +4,8 @@ import unittest
 
 import conda_api
 
+from conda.compat import text_type
+
 # Test Conda-Api by performing operations in a temporary directory
 
 class TestApi(unittest.TestCase):
@@ -83,7 +85,7 @@ class TestApi(unittest.TestCase):
         self.assertIsInstance(result['ipython'][0], dict)
 
     def test_config(self):
-        self.assertIsInstance(conda_api.config_path(), str)
+        self.assertIsInstance(conda_api.config_path(), text_type)
         self.assertEqual(conda_api.config_set('use_pip', False, file=self.config), [])
         self.assertEqual(conda_api.config_add('channels', 'wakari', file=self.config), [])
         self.assertEqual(conda_api.config_get('channels', file=self.config), {'channels': ['wakari']})
