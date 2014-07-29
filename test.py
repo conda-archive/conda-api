@@ -1,10 +1,14 @@
 import os
+import sys
 import tempfile
 import unittest
 
 import conda_api
 
-from conda.compat import text_type
+if sys.version_info[0] == 3:
+    text_type = str
+else:
+    text_type = unicode
 
 # Test Conda-Api by performing operations in a temporary directory
 
