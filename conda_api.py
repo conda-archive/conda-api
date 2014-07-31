@@ -12,7 +12,7 @@ class CondaError(Exception):
     "General Conda error"
     pass
 
-class CondaEnvExistsError(Exception):
+class CondaEnvExistsError(CondaError):
     "Conda environment already exists"
     pass
 
@@ -45,6 +45,30 @@ def _call_and_parse(extra_args, abspath=True):
         raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args,
                                                          stderr.decode()))
     return json.loads(stdout.decode())
+
+
+def _setup_install_commands_from_kwargs(kwargs, keys=tuple()):
+    cmd_list = []
+    if kwargs.get('override_channels', False) and 'channel' not in kwargs:
+        raise TypeError('conda search: override_channels requires channel')
+
+    if 'env' in kwargs:
+        cmd_list.extend(['--name', kwargs.pop('env')])
+    if 'prefix' in kwargs:
+        cmd_list.extend(['--prefix', kwargs.pop('prefix')])
+    if 'channel' in kwargs:
+        channel = kwargs.pop('channel')
+        if isinstance(channel, str):
+            cmd_list.extend(['--channel', channel])
+        else:
+            cmd_list.append('--channel')
+            cmd_list.extend(channel)
+
+    for key in keys:
+        if key in kwargs and kwargs[key]:
+            cmd_list.append('--' + key.replace('_', '-'))
+
+    return cmd_list
 
 
 def set_root_prefix(prefix=None):
@@ -92,8 +116,12 @@ def get_conda_version():
     """
     pat = re.compile(r'conda:?\s+(\d+\.\d\S+|unknown)')
     stdout, stderr = _call_conda(['--version'])
-    # for some reason argparse decided to output the version to stderr
+    # argparse outputs version to stderr in Python < 3.4.
+    # http://bugs.python.org/issue18920
     m = pat.match(stderr.decode().strip())
+    if m is None:
+        m = pat.match(stdout.decode().strip())
+
     if m is None:
         raise Exception('output did not match: %r' % stderr)
     return m.group(1)
@@ -148,6 +176,56 @@ def info(abspath=True):
     should only be used for testing and debugging.
     """
     return _call_and_parse(['info', '--json'], abspath=abspath)
+
+
+def package_info(package, abspath=True):
+    """
+    Return a dictionary with package information.
+
+    Structure is {
+        'package_name': [{
+            'depends': list,
+            'version': str,
+            'name': str,
+            'license': str,
+            'fn': ...,
+            ...
+        }]
+    }
+    """
+    return _call_and_parse(['info', package, '--json'], abspath=abspath)
+
+
+def search(regex=None, spec=None, **kwargs):
+    """
+    Search for packages.
+    """
+    cmd_list = ['search', '--json']
+
+    if regex and spec:
+        raise TypeError('conda search: only one of regex or spec allowed')
+
+    if regex:
+        cmd_list.append(regex)
+
+    if spec:
+        cmd_list.extend(['--spec', spec])
+
+    if 'platform' in kwargs:
+        platform = kwargs.pop('platform')
+        platforms = ('win-32', 'win-64', 'osx-64', 'linux-32', 'linux-64')
+        if platform not in platforms:
+            raise TypeError('conda search: platform must be one of ' +
+                             ', '.join(platforms))
+        cmd_list.extend(['--platform', platform])
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('canonical', 'unknown', 'use_index_cache', 'outdated',
+             'override_channels')))
+
+    return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
 
 
 def share(prefix):
@@ -219,6 +297,112 @@ def install(name=None, path=None, pkgs=None):
         raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
     return out
 
+
+def update(*pkgs, **kwargs):
+    """
+    Update package(s) (in an environment) by name.
+    """
+    cmd_list = ['update', '--json', '--quiet', '--yes']
+
+    if not pkgs and not kwargs.get('all'):
+        raise TypeError("Must specify at least one package to update, or all=True.")
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'no_deps', 'override_channels',
+             'no_pin', 'force', 'all', 'use_index_cache', 'use_local',
+             'alt_hint')))
+
+    cmd_list.extend(pkgs)
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
+def remove(*pkgs, **kwargs):
+    """
+    Remove a package (from an environment) by name.
+
+    Returns {
+        success: bool, (this is always true),
+        (other information)
+    }
+    """
+    cmd_list = ['remove', '--json', '--quiet', '--yes']
+
+    if not pkgs and not kwargs.get('all'):
+        raise TypeError("Must specify at least one package to remove, or all=True.")
+
+    if kwargs.get('name') and kwargs.get('path'):
+        raise TypeError('conda remove: At most one of name, path allowed')
+
+    if kwargs.get('name'):
+        cmd_list.extend(['--name', kwargs.pop('name')])
+
+    if kwargs.get('path'):
+        cmd_list.extend(['--prefix', kwargs.pop('path')])
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'features', 'override_channels',
+             'no_pin', 'force', 'all')))
+
+    cmd_list.extend(pkgs)
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
+def remove_environment(name=None, path=None, **kwargs):
+    """
+    Remove an environment entirely.
+
+    See ``remove``.
+    """
+    return remove(name=name, path=path, all=True, **kwargs)
+
+
+def clone_environment(clone, name=None, path=None, **kwargs):
+    """
+    Clone the environment ``clone`` into ``name`` or ``path``.
+    """
+    cmd_list = ['create', '--json', '--quiet']
+
+    if (name and path) or not (name or path):
+        raise TypeError("conda clone_environment: exactly one of name or path required")
+
+    if name:
+        cmd_list.extend(['--name', name])
+
+    if path:
+        cmd_list.extend(['--prefix', path])
+
+    cmd_list.extend(['--clone', clone])
+
+    cmd_list.extend(
+        _setup_install_commands_from_kwargs(
+            kwargs,
+            ('dry_run', 'unknown', 'use_index_cache', 'use_local', 'no_pin',
+             'force', 'all', 'channel', 'override_channels', 'no_default_packages')))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+
+    return result
+
+
 def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
     """
     Create a Popen process for cmd using the specified args but in the conda
@@ -288,6 +472,130 @@ def clone(path, prefix):
     The return object is a list of warnings.
     """
     return _call_and_parse(['clone', '--json', '--prefix', prefix, path])
+
+
+def _setup_config_from_kwargs(kwargs):
+    cmd_list = ['--json', '--force']
+
+    if 'file' in kwargs:
+        cmd_list.extend(['--file', kwargs['file']])
+
+    if 'system' in kwargs:
+        cmd_list.append('--system')
+
+    return cmd_list
+
+
+def config_path(**kwargs):
+    """
+    Get the path to the config file.
+    """
+    cmd_list = ['config', '--get']
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result['rc_path']
+
+
+def config_get(*keys, **kwargs):
+    """
+    Get the values of configuration keys.
+
+    Returns a dictionary of values. Note, the key may not be in the
+    dictionary if the key wasn't set in the configuration file.
+    """
+    cmd_list = ['config', '--get']
+    cmd_list.extend(keys)
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result['get']
+
+
+def config_set(key, value, **kwargs):
+    """
+    Set a key to a (bool) value.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--set', key, str(value)]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_add(key, value, **kwargs):
+    """
+    Add a value to a key.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--add', key, value]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_remove(key, value, **kwargs):
+    """
+    Remove a value from a key.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--remove', key, value]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def config_delete(key, **kwargs):
+    """
+    Remove a key entirely.
+
+    Returns a list of warnings Conda may have emitted.
+    """
+    cmd_list = ['config', '--remove-key', key]
+    cmd_list.extend(_setup_config_from_kwargs(kwargs))
+
+    result = _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result.get('warnings', [])
+
+
+def run(command, abspath=True):
+    """
+    Launch the specified app by name or full package name.
+
+    Returns a dictionary containing the key "fn", whose value is the full
+    package (ending in ``.tar.bz2``) of the app.
+    """
+    cmd_list = ['run', '--json', command]
+
+    result = _call_and_parse(cmd_list, abspath=abspath)
+
+    if 'error' in result:
+        raise CondaError('conda %s: %s' % (" ".join(cmd_list), result['error']))
+    return result
 
 
 def test():
