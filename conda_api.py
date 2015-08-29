@@ -84,14 +84,7 @@ def set_root_prefix(prefix=None):
         i = info(abspath=False)
         ROOT_PREFIX = i['root_prefix']
         '''
-        plat = 'posix'
-        if sys.platform.lower().startswith('win'):
-            listsep = ';'
-            plat = 'win'
-        else:
-            listsep = ':'
-
-        for p in os.environ['PATH'].split(listsep):
+        for p in os.environ['PATH'].split(os.sep):
             if (os.path.exists(os.path.join(p, 'conda')) or
                 os.path.exists(os.path.join(p, 'conda.exe')) or
                 os.path.exists(os.path.join(p, 'conda.bat'))):
@@ -103,7 +96,7 @@ def set_root_prefix(prefix=None):
                 ROOT_PREFIX = i['root_prefix']
                 break
         else: # fall back to standard install location, which may be wrong
-            if plat == 'win':
+            if sys.platform == 'win32':
                 ROOT_PREFIX = 'C:\Anaconda'
             else:
                 ROOT_PREFIX = '/opt/anaconda'
@@ -432,21 +425,14 @@ def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, 
     if name:
         path = get_prefix_envname(name)
 
-    plat = 'posix'
-    if sys.platform.lower().startswith('win'):
-        listsep = ';'
-        plat = 'win'
-    else:
-        listsep = ':'
-
     conda_env = dict(os.environ)
 
-    if plat == 'posix':
-        conda_env['PATH'] = path + os.path.sep + 'bin' + listsep + conda_env['PATH']
+    if sys.platform == 'win32':
+        conda_env['PATH'] = path + os.path.sep + 'Scripts' + os.sep + conda_env['PATH']
     else: # win
-        conda_env['PATH'] = path + os.path.sep + 'Scripts' + listsep + conda_env['PATH']
+        conda_env['PATH'] = path + os.path.sep + 'bin' + os.sep + conda_env['PATH']
 
-    conda_env['PATH'] = path + listsep + conda_env['PATH']
+    conda_env['PATH'] = path + os.sep + conda_env['PATH']
 
     cmd_list = [cmd]
     cmd_list.extend(args)
