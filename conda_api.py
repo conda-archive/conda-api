@@ -84,7 +84,7 @@ def set_root_prefix(prefix=None):
         i = info(abspath=False)
         ROOT_PREFIX = i['root_prefix']
         '''
-        for p in os.environ['PATH'].split(os.sep):
+        for p in os.environ['PATH'].split(os.pathsep):
             if (os.path.exists(os.path.join(p, 'conda')) or
                 os.path.exists(os.path.join(p, 'conda.exe')) or
                 os.path.exists(os.path.join(p, 'conda.bat'))):
@@ -428,11 +428,11 @@ def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, 
     conda_env = dict(os.environ)
 
     if sys.platform == 'win32':
-        conda_env['PATH'] = path + os.path.sep + 'Scripts' + os.sep + conda_env['PATH']
+        conda_env['PATH'] = join(path, 'Scripts') + os.pathsep + conda_env['PATH']
     else: # win
-        conda_env['PATH'] = path + os.path.sep + 'bin' + os.sep + conda_env['PATH']
+        conda_env['PATH'] = join(path, 'bin') + os.pathsep + conda_env['PATH']
 
-    conda_env['PATH'] = path + os.sep + conda_env['PATH']
+    conda_env['PATH'] = path + os.pathsep + conda_env['PATH']
 
     cmd_list = [cmd]
     cmd_list.extend(args)
