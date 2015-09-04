@@ -12,9 +12,11 @@ class CondaError(Exception):
     "General Conda error"
     pass
 
+
 class CondaEnvExistsError(CondaError):
     "Conda environment already exists"
     pass
+
 
 def _call_conda(extra_args, abspath=True):
     # call conda with the list of extra arguments, and return the tuple
@@ -80,27 +82,10 @@ def set_root_prefix(prefix=None):
 
     if prefix:
         ROOT_PREFIX = prefix
-    else: # find *some* conda instance, and then use info() to get 'root_prefix'
-        i = info(abspath=False)
-        ROOT_PREFIX = i['root_prefix']
-        '''
-        for p in os.environ['PATH'].split(os.pathsep):
-            if (os.path.exists(os.path.join(p, 'conda')) or
-                os.path.exists(os.path.join(p, 'conda.exe')) or
-                os.path.exists(os.path.join(p, 'conda.bat'))):
-
-                # TEMPORARY:
-                ROOT_PREFIX = os.path.dirname(p) # root prefix is one directory up
-                i = info()
-                # REAL:
-                ROOT_PREFIX = i['root_prefix']
-                break
-        else: # fall back to standard install location, which may be wrong
-            if sys.platform == 'win32':
-                ROOT_PREFIX = 'C:\Anaconda'
-            else:
-                ROOT_PREFIX = '/opt/anaconda'
-        '''
+    else:
+        # find some conda instance, and then use info to get 'root_prefix'
+        info = _call_and_parse(['info', '--json'], abspath=False)
+        ROOT_PREFIX = info['root_prefix']
 
 
 def get_conda_version():
@@ -614,7 +599,7 @@ if __name__ == '__main__':
                      description="self-test conda-api")
     opts, args = p.parse_args()
     if len(args) == 0:
-        pass
+        set_root_prefix()
     elif len(args) == 1:
         set_root_prefix(args[0])
     else:
