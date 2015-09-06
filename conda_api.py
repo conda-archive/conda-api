@@ -179,12 +179,7 @@ def search(regex=None, spec=None, **kwargs):
         cmd_list.extend(['--spec', spec])
 
     if 'platform' in kwargs:
-        platform = kwargs.pop('platform')
-        platforms = ('win-32', 'win-64', 'osx-64', 'linux-32', 'linux-64')
-        if platform not in platforms:
-            raise TypeError('conda search: platform must be one of ' +
-                             ', '.join(platforms))
-        cmd_list.extend(['--platform', platform])
+        cmd_list.extend(['--platform', kwargs.pop('platform')])
 
     cmd_list.extend(
         _setup_install_commands_from_kwargs(
