@@ -159,17 +159,6 @@ def info(abspath=True):
 def package_info(package, abspath=True):
     """
     Return a dictionary with package information.
-
-    Structure is {
-        'package_name': [{
-            'depends': list,
-            'version': str,
-            'name': str,
-            'license': str,
-            'fn': ...,
-            ...
-        }]
-    }
     """
     return _call_and_parse(['info', package, '--json'], abspath=abspath)
 
@@ -206,21 +195,7 @@ def search(regex=None, spec=None, **kwargs):
     return _call_and_parse(cmd_list, abspath=kwargs.get('abspath', True))
 
 
-def share(prefix):
-    """
-    Create a "share package" of the environment located in `prefix`,
-    and return a dictionary with (at least) the following keys:
-      - 'path': the full path to the created package
-      - 'warnings': a list of warnings
-
-    This file is created in a temp directory, and it is the callers
-    responsibility to remove this directory (after the file has been
-    handled in some way).
-    """
-    return _call_and_parse(['share', '--json', '--prefix', prefix])
-
-
-def create(name=None, path=None, pkgs=None):
+def create(name=None, prefix=None, pkgs=None):
     """
     Create an environment either by name or path with a specified set of
     packages
@@ -234,15 +209,15 @@ def create(name=None, path=None, pkgs=None):
         ref         = name
         search      = [os.path.join(d, name) for d in info()['envs_dirs']]
         cmd_list    = ['create', '--yes', '--quiet', '--name', name]
-    elif path:
-        ref         = path
-        search      = [path]
-        cmd_list    = ['create', '--yes', '--quiet', '--prefix', path]
+    elif prefix:
+        ref         = prefix
+        search      = [prefix]
+        cmd_list    = ['create', '--yes', '--quiet', '--prefix', prefix]
     else:
         raise TypeError('must specify either an environment name or a path '
                         'for new environment')
 
-    if any(os.path.exists(path) for path in search):
+    if any(os.path.exists(prefix) for prefix in search):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
 
     cmd_list.extend(pkgs)
@@ -252,7 +227,7 @@ def create(name=None, path=None, pkgs=None):
     return out
 
 
-def install(name=None, path=None, pkgs=None):
+def install(name=None, prefix=None, pkgs=None):
     """
     Install packages into an environment either by name or path with a
     specified set of packages
@@ -264,8 +239,8 @@ def install(name=None, path=None, pkgs=None):
     cmd_list = ['install', '--yes', '--quiet']
     if name:
         cmd_list.extend(['--name', name])
-    elif path:
-        cmd_list.extend(['--prefix', path])
+    elif prefix:
+        cmd_list.extend(['--prefix', prefix])
     else: # just install into the current environment, whatever that is
         pass
 
@@ -381,25 +356,16 @@ def clone_environment(clone, name=None, path=None, **kwargs):
     return result
 
 
-def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, stderr=None, timeout=None):
+def process(name=None, prefix=None, cmd=None, args=None,
+            stdin=None, stdout=None, stderr=None, timeout=None):
     """
     Create a Popen process for cmd using the specified args but in the conda
-    environment specified by name or path.
+    environment specified by name or prefix.
 
     The returned object will need to be invoked with p.communicate() or similar.
-
-    :param name: name of conda environment
-    :param path: path to conda environment (if no name specified)
-    :param cmd:  command to invoke
-    :param args: argument
-    :param stdin: stdin
-    :param stdout: stdout
-    :param stderr: stderr
-    :return: Popen object
     """
-
-    if bool(name) == bool(path):
-        raise TypeError('exactly one of name or path must be specified')
+    if bool(name) == bool(prefix):
+        raise TypeError('exactly one of name or prefix must be specified')
 
     if not cmd:
         raise TypeError('cmd to execute must be specified')
@@ -408,16 +374,16 @@ def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, 
         args = []
 
     if name:
-        path = get_prefix_envname(name)
+        prefix = get_prefix_envname(name)
 
     conda_env = dict(os.environ)
 
     if sys.platform == 'win32':
-        conda_env['PATH'] = join(path, 'Scripts') + os.pathsep + conda_env['PATH']
-    else: # win
-        conda_env['PATH'] = join(path, 'bin') + os.pathsep + conda_env['PATH']
+        conda_env['PATH'] = join(prefix, 'Scripts') + os.pathsep + conda_env['PATH']
+    else: # Unix
+        conda_env['PATH'] = join(prefix, 'bin') + os.pathsep + conda_env['PATH']
 
-    conda_env['PATH'] = path + os.pathsep + conda_env['PATH']
+    conda_env['PATH'] = prefix + os.pathsep + conda_env['PATH']
 
     cmd_list = [cmd]
     cmd_list.extend(args)
@@ -427,22 +393,6 @@ def process(name=None, path=None, cmd=None, args=None, stdin=None, stdout=None, 
     except OSError:
         raise Exception("could not invoke %r\n" % cmd_list)
     return p
-
-
-def clone(path, prefix):
-    """
-    Clone a "share package" (located at `path`) by creating a new
-    environment at `prefix`, and return a dictionary with (at least) the
-    following keys:
-      - 'warnings': a list of warnings
-
-    The directory `path` is located in, should be some temp directory or
-    some other directory OUTSIDE /opt/anaconda.  After calling this
-    function, the original file (at `path`) may be removed (by the caller
-    of this function).
-    The return object is a list of warnings.
-    """
-    return _call_and_parse(['clone', '--json', '--prefix', prefix, path])
 
 
 def _setup_config_from_kwargs(kwargs):
